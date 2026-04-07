@@ -1,0 +1,25 @@
+# 1. 가상환경 (가장 중요! 10,000개 파일의 주범)
+.venv/
+venv/
+ENV/
+env/
+
+# 2. 파이썬 캐시 파일 (컴파일된 파일들)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 3. OS 관련 임시 파일
+.DS_Store
+Thumbs.db
+
+# 4. VS Code 관련 설정 (개인 설정이므로 공유하지 않음)
+.vscode/
+
+# 5. 환경 변수 파일 (API 키 등 보안 정보)
+.env
+
+# 6. 모델 및 데이터 (크기가 큼)
+models/fine_tuned_gpt2/
+*.bin
+*.model
