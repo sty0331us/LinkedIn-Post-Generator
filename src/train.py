@@ -1,65 +1,102 @@
-from transformers import GPT2Tokenizer, GPT2LMHeadModel, Trainer, TrainingArguments
-from datasets import Dataset
-from pathlib import Path
+import os
 import json
 import torch
+import socket
+from huggingface_hub import configure_http_backend
+import requests
+from transformers import GPT2Tokenizer, GPT2LMHeadModel, Trainer, TrainingArguments
+from datasets import Dataset
 
 """
 GPT-2 모델 파인튜닝
 LinkedIn 스타일의 입출력 데이터로 GPT-2 모델을 파인튜닝합니다.
 """
 
+# Hugging Face 로그 레벨을 INFO로 설정하여 상세 진행 상황 출력
+os.environ["TRANSFORMERS_VERBOSITY"] = "info"
+os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "0"
+
+# 무한 대기(Hang) 방지를 위해 기본 네트워크 타임아웃 설정 (300초)
+socket.setdefaulttimeout(300)
+
+# 프로젝트 루트 경로 설정 (실행 위치와 무관하게 안전한 경로 참조)
+script_dir = os.path.dirname(os.path.abspath(__file__))
+data_path = os.path.abspath(os.path.join(script_dir, "..", "data", "linkedin_posts.json"))
+output_dir = os.path.abspath(os.path.join(script_dir, "..", "models", "fine_tuned_gpt2"))
+
 # MPS 디바이스 확인(macOS에서 GPU 사용 가능 여부 확인)
 device = "mps" if torch.backends.mps.is_available() else "cpu"
-print(f"Using device: {device}")
+print(f"[1/6] Using device: {device}")
 
 # 기본 모델 로드
+print("[2/6] Downloading/Loading GPT-2 model and tokenizer... (이 작업은 처음에 몇 분 정도 걸릴 수 있습니다)")
 model_name = "gpt2"
-tokenizer = GPT2Tokenizer.from_pretrained(model_name)
-model = GPT2LMHeadModel.from_pretrained(model_name)
-tokenizer.pad_token = tokenizer.eos_token
 
-# 모델을 디바이스로 이동 (macOS에서 MPS 사용 가능 시)
+
+def backend_factory():
+    session = requests.Session()
+    session.mount("https://", requests.adapters.HTTPAdapter(max_retries=5))
+    return session
+
+configure_http_backend(backend_factory)
+
+try:
+    tokenizer = GPT2Tokenizer.from_pretrained(model_name, local_files_only=False)
+    print("  - Tokenizer loaded.")
+
+    model = GPT2LMHeadModel.from_pretrained(
+        model_name,
+        low_cpu_mem_usage=True,
+        resume_download=True,
+    )
+    print("  - Model weights loaded.")
+
+    tokenizer.pad_token = tokenizer.eos_token
+    model.config.pad_token_id = model.config.eos_token_id
+
+except Exception as e:
+    print(f"\n Error: {e}")
+    print("현재 네트워크에서 Hugging Face 서버 접속이 원활하지 않습니다.")
+    print("팁: 핸드폰 핫스팟(Hotspot)에 연결해서 시도해보거나, VPN을 꺼보세요.")
+    exit(1)
+
+# 모델을 디바이스로 이동
 model = model.to(device)
 
 # 훈련 데이터 로드
-data_path = Path(__file__).parent.parent / "data" / "linkedin_posts.json"
-with open(data_path, "r") as f:
+print(f"[3/6] Loading training data from {data_path}...")
+if not os.path.exists(data_path):
+    raise FileNotFoundError(f"Data file not found at {data_path}")
+
+with open(data_path, "r", encoding="utf-8") as f:
     data = json.load(f)
 
 
 def preprocess_function(examples):
-    """
-    데이터를 모델 훈련용 형식으로 변환
-    
-    Args:
-        examples: 입출력 쌍의 리스트
-    
-    Returns:
-        토큰화된 입력과 레이블
-    """
-    inputs = [f"Input: {inp} Output:" for inp in examples["input"]]
-    targets = examples["output"]
-    
-    model_inputs = tokenizer(inputs, max_length=512, truncation=True, padding="max_length")
-    labels = tokenizer(targets, max_length=512, truncation=True, padding="max_length")["input_ids"]
-    model_inputs["labels"] = labels
-    
-    return model_inputs
+    texts = [f"Input: {inp} Output: {out}" for inp, out in zip(examples["input"], examples["output"])]
+    encodings = tokenizer(texts, max_length=512, truncation=True, padding="max_length", return_tensors=None)
+    encodings["labels"] = encodings["input_ids"].copy()
+    return encodings
 
 
 # 데이터 전처리
+print("[4/6] Preprocessing and tokenizing dataset...")
 dataset = Dataset.from_list(data)
 tokenized_dataset = dataset.map(preprocess_function, batched=True)
 
 # 훈련 설정
-output_dir = str(Path(__file__).parent.parent / "models" / "fine_tuned_gpt2")
+print("[5/6] Setting up training arguments...")
 training_args = TrainingArguments(
     output_dir=output_dir,
     num_train_epochs=3,
-    per_device_train_batch_size=4,
-    save_steps=500,
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=2,
+    save_steps=100,
     save_total_limit=2,
+    report_to="none",
+    logging_steps=10,
+    fp16=False,
+    dataloader_num_workers=0,
 )
 
 # 모델 훈련
@@ -69,10 +106,12 @@ trainer = Trainer(
     train_dataset=tokenized_dataset,
 )
 
+print("[6/6] Starting training...")
 trainer.train()
 
 # 훈련된 모델 저장
+print(f"Saving fine-tuned model to {output_dir}...")
 trainer.save_model(output_dir)
 tokenizer.save_pretrained(output_dir)
 
-print("Model fine-tuned and saved.")
+print("Model fine-tuned and saved successfully!")

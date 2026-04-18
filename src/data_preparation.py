@@ -90,14 +90,14 @@ def generate_linkedin_posts(num_samples: int = 200) -> list[dict]:
     """
     client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from environment
 
-    # Build all persona × input combinations, shuffle, then take num_samples
+    # Build all persona x input combinations, shuffle, then take num_samples
     combinations = [(p, i) for p in PERSONAS for i in INPUTS]
     random.shuffle(combinations)
     selected = combinations[:num_samples]
 
     data = []
     for idx, (persona, input_text) in enumerate(selected, start=1):
-        print(f"  [{idx}/{num_samples}] {input_text[:40]!r}  →  {persona[:45]}...")
+        print(f"  [{idx}/{num_samples}] {input_text[:40]!r}  ->  {persona[:45]}...")
         output_text = generate_post(client, persona, input_text)
         data.append({"input": input_text, "output": output_text})
 
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    print(f"Generating {args.num_samples} samples with {len(PERSONAS)} personas × {len(INPUTS)} topics...")
+    print(f"Generating {args.num_samples} samples with {len(PERSONAS)} personas x {len(INPUTS)} topics...")
     print("Make sure ANTHROPIC_API_KEY is set in your environment.\n")
 
     data = generate_linkedin_posts(num_samples=args.num_samples)
