@@ -1,5 +1,6 @@
 from transformers import GPT2Tokenizer, GPT2LMHeadModel, Trainer, TrainingArguments
 from datasets import Dataset
+from pathlib import Path
 import json
 import torch
 
@@ -22,7 +23,8 @@ tokenizer.pad_token = tokenizer.eos_token
 model = model.to(device)
 
 # 훈련 데이터 로드
-with open("../data/linkedin_posts.json", "r") as f:
+data_path = Path(__file__).parent.parent / "data" / "linkedin_posts.json"
+with open(data_path, "r") as f:
     data = json.load(f)
 
 
@@ -36,8 +38,8 @@ def preprocess_function(examples):
     Returns:
         토큰화된 입력과 레이블
     """
-    inputs = [f"Input: {ex['input']} Output:" for ex in examples]
-    targets = [ex["output"] for ex in examples]
+    inputs = [f"Input: {inp} Output:" for inp in examples["input"]]
+    targets = examples["output"]
     
     model_inputs = tokenizer(inputs, max_length=512, truncation=True, padding="max_length")
     labels = tokenizer(targets, max_length=512, truncation=True, padding="max_length")["input_ids"]
@@ -51,13 +53,13 @@ dataset = Dataset.from_list(data)
 tokenized_dataset = dataset.map(preprocess_function, batched=True)
 
 # 훈련 설정
+output_dir = str(Path(__file__).parent.parent / "models" / "fine_tuned_gpt2")
 training_args = TrainingArguments(
-    output_dir="../models/fine_tuned_gpt2",
+    output_dir=output_dir,
     num_train_epochs=3,
     per_device_train_batch_size=4,
     save_steps=500,
     save_total_limit=2,
-    use_mps_device=True,  # Enable using MPS of Mac if available
 )
 
 # 모델 훈련
@@ -70,7 +72,7 @@ trainer = Trainer(
 trainer.train()
 
 # 훈련된 모델 저장
-trainer.save_model("../models/fine_tuned_gpt2")
-tokenizer.save_pretrained("../models/fine_tuned_gpt2")
+trainer.save_model(output_dir)
+tokenizer.save_pretrained(output_dir)
 
 print("Model fine-tuned and saved.")

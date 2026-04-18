@@ -18,6 +18,7 @@ if not os.path.isdir(model_path):
     )
 
 tokenizer = GPT2Tokenizer.from_pretrained(model_path)
+tokenizer.pad_token = tokenizer.eos_token
 model = GPT2LMHeadModel.from_pretrained(model_path)
 
 
@@ -33,13 +34,19 @@ def generate_post(input_text):
     """
     prompt = f"Input: {input_text} Output:"
     inputs = tokenizer(prompt, return_tensors="pt")
-    
+
     # 텍스트 생성
     outputs = model.generate(
         inputs["input_ids"],
-        max_length=100,
+        attention_mask=inputs["attention_mask"],
+        max_new_tokens=150,
         num_return_sequences=1,
-        no_repeat_ngram_size=2
+        no_repeat_ngram_size=2,
+        do_sample=True,
+        temperature=0.7,
+        top_p=0.9,
+        top_k=50,
+        pad_token_id=tokenizer.eos_token_id,
     )
     
     generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
