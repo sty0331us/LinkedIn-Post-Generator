@@ -1,6 +1,6 @@
 [
     {
-<<<<<<< HEAD
+
         "input": "I switched careers at 35.",
         "output": "At 35, I walked away from a decade in finance to start over in marketing — and it turned out to be the best growth strategy I ever executed. Everyone told me I was \"throwing away\" my experience, but the opposite happened: my financial background became my unfair advantage in a field where most marketers struggle to tie campaigns to revenue. The counterintuitive truth is that starting over doesn't erase your expertise — it compounds it in ways your competitors can't replicate. If your career feels too linear, that might be the biggest risk of all.\n\n#CareerPivot #GrowthStrategy #MarketingLeadership"
     },
@@ -799,7 +799,8 @@
     {
         "input": "Networking feels uncomfortable to me.",
         "output": "Here's something I tell every candidate who says \"I hate networking\" — you're probably overthinking it. Networking isn't working a room with a stack of business cards; it's just having genuine conversations with people about work you both care about. Start small: comment thoughtfully on someone's post, ask a former colleague how their new role is going, or message someone whose career path you admire with a specific question. The best professional relationships I've seen weren't built at mixers — they were built one real conversation at a time. #CareerAdvice #Networking #JobSearchTips"
-=======
+    },
+    {
         "input": "New project launch.",
         "output": "Launching a new project today! \ud83c\udf89 Can't wait to share updates with you all. #ProjectLaunch #Excited #NewBeginnings"
     },
@@ -4798,6 +4799,5 @@
     {
         "input": "I learned Python today.",
         "output": "Thrilled to announce I've dived into Python! \ud83d\ude80 Here's my journey: mastering new concepts every day. #Python #Tech #LearningJourney"
->>>>>>> 2f672e22c2286ae4ecb4368aaffccfb0c9a6acde
     }
 ]
