@@ -3,3 +3,4 @@ torch
 datasets==2.4.0
 accelerate==0.20.3
 deep-translator
+anthropic
