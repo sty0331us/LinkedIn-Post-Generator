@@ -28,9 +28,9 @@ socket.setdefaulttimeout(300)
 
 # 프로젝트 루트 경로 설정 (실행 위치와 무관하게 안전한 경로 참조)
 script_dir = os.path.dirname(os.path.abspath(__file__))
-data_dir = Path(script_dir).parent / "data"
-output_dir = Path(script_dir).parent / "models" / "fine_tuned_gpt2"
 
+data_path = os.path.abspath(os.path.join(script_dir, "..", "data", "linkedin_posts_hf.json"))
+output_dir = os.path.abspath(os.path.join(script_dir, "..", "models", "fine_tuned_gpt2"))
 
 def get_latest_dataset_file(data_directory: Path) -> Optional[Path]:
     data_directory = Path(data_directory)

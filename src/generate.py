@@ -2,11 +2,17 @@ import os
 import argparse
 import torch
 import warnings
-from transformers import GPT2Tokenizer, GPT2LMHeadModel
+import logging
+import unicodedata
+warnings.filterwarnings("ignore")
 
-# 경고 메시지 억제
-warnings.filterwarnings("ignore", message=".*attention_mask.*")
-warnings.filterwarnings("ignore", message=".*pad_token_id.*")
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"
+logging.getLogger("transformers").setLevel(logging.ERROR)
+
+import transformers
+transformers.logging.set_verbosity_error()
+
+from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
 """
 LinkedIn 포스팅 생성 (추론)
@@ -32,6 +38,15 @@ model.eval()
 model.config.pad_token_id = tokenizer.eos_token_id
 
 
+def is_korean(text):
+    return any(unicodedata.name(c, "").startswith("HANGUL") for c in text)
+
+
+def translate_to_english(text):
+    from deep_translator import GoogleTranslator
+    return GoogleTranslator(source="ko", target="en").translate(text)
+
+
 def generate_post(input_text):
     """
     입력 문장을 LinkedIn 포스팅으로 변환
@@ -42,6 +57,9 @@ def generate_post(input_text):
     Returns:
         LinkedIn 스타일의 생성된 포스팅 텍스트
     """
+    if is_korean(input_text):
+        input_text = translate_to_english(input_text)
+
     prompt = f"Input: {input_text} Output:"
     inputs = tokenizer(prompt, return_tensors="pt", return_attention_mask=True)
 
