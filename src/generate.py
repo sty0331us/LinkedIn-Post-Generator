@@ -29,12 +29,10 @@ if not os.path.isdir(model_path):
         "Please make sure the fine-tuned model was saved there, or run src/train.py first."
     )
 
-# 원본 gpt2 토크나이저 사용 (저장된 토크나이저 대신)
-tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+tokenizer = GPT2Tokenizer.from_pretrained(model_path)
 if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
 
-# 파인튜닝된 모델 로드
 model = GPT2LMHeadModel.from_pretrained(model_path)
 model.eval()
 model.config.pad_token_id = tokenizer.eos_token_id
@@ -52,10 +50,10 @@ def translate_to_english(text):
 def generate_post(input_text):
     """
     입력 문장을 LinkedIn 포스팅으로 변환
-    
+
     Args:
         input_text: 변환할 간단한 문장
-    
+
     Returns:
         LinkedIn 스타일의 생성된 포스팅 텍스트
     """
@@ -63,30 +61,29 @@ def generate_post(input_text):
         input_text = translate_to_english(input_text)
 
     prompt = f"Input: {input_text} Output:"
-    
-    # 텍스트 인코딩 (attention_mask 포함)
     inputs = tokenizer(prompt, return_tensors="pt", return_attention_mask=True)
-    
-    # 텍스트 생성
+
     with torch.no_grad():
         output = model.generate(
             inputs["input_ids"],
             attention_mask=inputs["attention_mask"],
-            max_length=120,
+            max_new_tokens=150,
             num_return_sequences=1,
             no_repeat_ngram_size=2,
+            do_sample=True,
             temperature=0.7,
             top_p=0.9,
-            do_sample=True
+            top_k=50,
+            pad_token_id=tokenizer.eos_token_id,
         )
-    
+
     generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
-    
+
     # "Output:" 이후 부분만 추출
     if "Output:" in generated_text:
         result = generated_text.split("Output:")[1].strip()
         return result if result else generated_text
-    
+
     return generated_text
 
 
@@ -95,8 +92,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=str, required=True, help="Simple sentence to transform")
     args = parser.parse_args()
-    
+
     post = generate_post(args.input)
-    
+
     print("Generated LinkedIn Post:")
     print(post)

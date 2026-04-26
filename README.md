@@ -11,27 +11,35 @@
 - **데이터**: 합성 데이터셋
   - 입력: 간단한 문장이나 단어들 (예: "I learned Python today.")
   - 출력: LinkedIn 스타일 포스팅 (예: "Excited to share that I've mastered Python! 🚀 Here's what I learned: [details]. #Python #Coding")
-  - 데이터 생성: `src/data_preparation.py`에서 합성 데이터를 생성합니다. 실제 LinkedIn 데이터를 수집할 수 없으므로, 템플릿 기반으로 생성.
+  - 데이터 생성: `src/data_preparation_claude.py` 또는 `src/data_preparation_gemini.py`에서 합성 데이터를 생성합니다. LinkedIn Posting 템플릿 기반으로 생성합니다.
 
 ## 프로젝트 구조
 ```
 LinkedIn-Post-Generator/
 ├── src/
-│   ├── data_preparation.py  # 데이터 생성 스크립트
-│   ├── train.py             # 모델 파인튜닝 스크립트
-│   └── generate.py          # 추론 스크립트
+│   ├── data_preparation.py           # Claude 기반 데이터 생성 호환 래퍼
+│   ├── data_preparation_claude.py    # Claude 기반 데이터 생성 모듈
+│   ├── data_preparation_gemini.py    # Gemini 기반 데이터 생성 모듈
+│   ├── train.py                      # 모델 파인튜닝 스크립트
+│   └── generate.py                   # 추론 스크립트
 ├── data/
-│   └── linkedin_posts.json  # 생성된 데이터셋
+│   ├── linkedin_posts_0420_0757.json    # 타임스탬프 기반 생성 데이터셋
+│   └── linkedin_posts_0420_0800.json    # 새로 생성 시 타임스탬프 증가
 ├── models/
-│   └── fine_tuned_gpt2/     # 파인튜닝된 모델 저장 디렉토리
-├── requirements.txt          # 의존성 파일
-└── README.md                 # 이 파일
+│   └── fine_tuned_gpt2/              # 파인튜닝된 모델 저장 디렉토리
+├── requirements.txt                   # 의존성 파일
+└── README.md                          # 이 파일
 ```
 
 ## 설치 및 실행
 1. 의존성 설치: `pip install -r requirements.txt`
-2. 데이터 준비: `python src/data_preparation.py`
+2. 데이터 준비: `python src/data_preparation_claude.py` 또는 `python src/data_preparation_gemini.py`
+   - Claude 기본 사용: `python src/data_preparation.py`
+   - Gemini 수동 사용: `python src/data_preparation_gemini.py`
 3. 모델 파인튜닝: `python src/train.py`
+   - 기존 파일로 학습: `python src/train.py --data-file data/linkedin_posts_0420_0757.json`
+   - 새로운 데이터셋 생성 후 학습: `python src/train.py --generate-data`
+   - Gemini로 데이터셋 생성 후 학습: `python src/train.py --generate-data --prepare-with gemini`
 4. 포스트 생성: `python src/generate.py --input "Your simple sentence"`
 
 ## 참고
