@@ -14,14 +14,15 @@ print("GPT-2 vs Flan-T5 (구 데이터) vs Flan-T5 (새 데이터) 비교")
 print("=" * 70)
 
 print("\n[GPT-2 로딩 중...]\n")
-from generate import generate_post as gpt2_generate
+from gpt2.generate import generate_post as gpt2_generate
 
 print("\n[Flan-T5 (구 데이터) 로딩 중...]\n")
-from generate_flan_t5 import generate_post as t5_old_generate
+from flan_t5.generate import generate_post as t5_old_generate
 
 print("\n[Flan-T5 (새 데이터) 로딩 중...]\n")
 
-new_model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "models", "fine_tuned_flan_t5_new"))
+from pathlib import Path
+new_model_path = str(Path(__file__).resolve().parents[1] / "models" / "fine_tuned_flan_t5_new")
 if not os.path.isdir(new_model_path):
     print("⚠️  새 데이터 모델이 아직 학습 중입니다. 두 모델만 비교합니다.\n")
     t5_new_generate = None

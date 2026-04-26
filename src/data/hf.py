@@ -1,6 +1,7 @@
 import json
 import re
 import os
+from pathlib import Path
 
 """
 HuggingFace 데이터셋(ShayanShamsi/prompt_to_linkedin_post)을
@@ -10,6 +11,8 @@ HuggingFace 데이터셋(ShayanShamsi/prompt_to_linkedin_post)을
 결과: data/linkedin_posts_hf.json  (짧은 input + output)
 """
 
+_ROOT = Path(__file__).resolve().parents[2]
+
 PREFIXES = [
     r"^(generate|compose|create|write|draft|please generate|please write|please create)\s+a\s+linkedin\s+post\s+(about|announcing|expressing|encouraging|that|detailing|regarding|describing|highlighting|sharing|showcasing|discussing|celebrating|congratulating|introducing|covering|summarizing|focusing on|to)?\s*",
     r"^(generate|compose|create|write|draft|please generate|please write|please create)\s+a\s+linkedin\s+post\s+with\s+the\s+following\s+details:\s*[-•]?\s*start with an engaging hook:\s*[\"']?",
@@ -17,22 +20,16 @@ PREFIXES = [
 
 def shorten_prompt(prompt: str) -> str:
     text = prompt.strip()
-
-    # 줄바꿈이 있으면 첫 줄만 사용
     first_line = text.split("\n")[0].strip()
 
-    # 앞의 "Generate a LinkedIn post about/announcing..." 패턴 제거
     for pattern in PREFIXES:
         first_line = re.sub(pattern, "", first_line, flags=re.IGNORECASE).strip()
 
-    # 따옴표 제거
     first_line = first_line.strip('"\'')
 
-    # 너무 길면 첫 문장만 (마침표 기준)
     sentences = re.split(r'(?<=[.!?])\s+', first_line)
     result = sentences[0].strip().rstrip(".")
 
-    # 그래도 너무 길면 60자에서 자름
     if len(result) > 60:
         result = result[:60].rsplit(" ", 1)[0]
 
@@ -40,11 +37,8 @@ def shorten_prompt(prompt: str) -> str:
 
 
 def main():
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_dir = os.path.dirname(script_dir)
-
-    input_path = os.path.join(project_dir, "data", "hf_raw.json")
-    output_path = os.path.join(project_dir, "data", "linkedin_posts_hf.json")
+    input_path = str(_ROOT / "data" / "hf_raw.json")
+    output_path = str(_ROOT / "data" / "linkedin_posts_hf.json")
 
     with open(input_path, "r", encoding="utf-8") as f:
         raw = json.load(f)

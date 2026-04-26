@@ -4,11 +4,11 @@
 
 import json
 import re
-import os
+from pathlib import Path
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-data_path = os.path.join(script_dir, "..", "data", "linkedin_posts_hf.json")
-output_path = os.path.join(script_dir, "..", "data", "linkedin_posts_reformatted.json")
+_ROOT = Path(__file__).resolve().parents[2]
+data_path = str(_ROOT / "data" / "linkedin_posts_hf.json")
+output_path = str(_ROOT / "data" / "linkedin_posts_reformatted.json")
 
 
 def extract_first_sentence(text):
@@ -19,13 +19,12 @@ def extract_first_sentence(text):
 
 def extract_hashtags(text):
     tags = re.findall(r'#\w+', text)
-    return tags[:5]  # 최대 5개
+    return tags[:5]
 
 
 def build_input(post_text):
     topic = extract_first_sentence(post_text)
     tags = extract_hashtags(post_text)
-
     result = f"topic: {topic}"
     if tags:
         result += f" | tags: {' '.join(tags)}"

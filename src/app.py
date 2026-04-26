@@ -3,7 +3,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import gradio as gr
-from generate_flan_t5 import generate_post
+from flan_t5.generate import generate_post
 
 
 def generate(input_text):

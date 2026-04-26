@@ -1,15 +1,22 @@
 import argparse
 import json
+import os
 import random
 import re
 from datetime import datetime
 from pathlib import Path
 
-import anthropic
+try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None
 
 """
-CLAUDE 기반 LinkedIn 포스팅 합성 데이터 생성 스크립트
+Gemini 기반 LinkedIn 포스팅 합성 데이터 생성 스크립트
+`google-generativeai` 패키지와 `GOOGLE_API_KEY`가 필요합니다.
 """
+
+_ROOT = Path(__file__).resolve().parents[2]
 
 PERSONAS = [
     "a senior software engineer sharing a technical lesson learned on the job",
@@ -62,35 +69,33 @@ Rules:
 def get_versioned_output_path(output_dir: str, base_name: str = "linkedin_posts") -> Path:
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-
     timestamp = datetime.now().strftime("%m%d_%H%M")
     return output_dir / f"{base_name}_{timestamp}.json"
 
 
-def generate_post(client: anthropic.Anthropic, persona: str, input_text: str) -> str:
-    """Generate one LinkedIn post using Claude."""
-    with client.messages.stream(
-        model="claude-opus-4-6",
-        max_tokens=300,
-        system=[
-            {
-                "type": "text",
-                "text": SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=[
-            {
-                "role": "user",
-                "content": f"Persona: {persona}\nInput: {input_text}\n\nWrite the LinkedIn post:",
-            }
-        ],
-    ) as stream:
-        return stream.get_final_message().content[0].text.strip()
+def ensure_gemini_client():
+    if genai is None:
+        raise ImportError("Install with `pip install google-generativeai`.")
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        raise RuntimeError("Set GOOGLE_API_KEY in your environment.")
+    genai.configure(api_key=api_key)
+    return genai
+
+
+def generate_post(client, persona: str, input_text: str) -> str:
+    prompt = f"{SYSTEM_PROMPT}\n\nPersona: {persona}\nInput: {input_text}\n\nWrite the LinkedIn post:"
+    if hasattr(client, "generate_text"):
+        response = client.generate_text(model="gemini-1.0", prompt=prompt, max_output_tokens=300)
+        return getattr(response, "text", str(response)).strip()
+    if hasattr(client, "generate"):
+        response = client.generate(model="gemini-1.0", prompt=prompt, max_output_tokens=300)
+        return getattr(response, "text", str(response)).strip()
+    raise RuntimeError("Unsupported Gemini client interface.")
 
 
 def generate_linkedin_posts(num_samples: int = 200) -> list[dict]:
-    client = anthropic.Anthropic()
+    client = ensure_gemini_client()
     combinations = [(p, i) for p in PERSONAS for i in INPUTS]
     random.shuffle(combinations)
     selected = combinations[:num_samples]
@@ -109,7 +114,9 @@ def save_dataset(data: list[dict], output_path: Path) -> None:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
 
-def generate_and_save(num_samples: int = 200, output_dir: str = "data") -> Path:
+def generate_and_save(num_samples: int = 200, output_dir: str = None) -> Path:
+    if output_dir is None:
+        output_dir = str(_ROOT / "data")
     data = generate_linkedin_posts(num_samples=num_samples)
     output_path = get_versioned_output_path(output_dir)
     save_dataset(data, output_path)
@@ -117,27 +124,13 @@ def generate_and_save(num_samples: int = 200, output_dir: str = "data") -> Path:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Generate a LinkedIn post dataset using Claude."
-    )
-    parser.add_argument(
-        "--num-samples",
-        type=int,
-        default=200,
-        help="Number of (input, output) pairs to generate.",
-    )
-    parser.add_argument(
-        "--output-dir",
-        type=str,
-        default=str(Path(__file__).resolve().parent.parent / "data"),
-        help="Directory to save generated dataset files.",
-    )
+    parser = argparse.ArgumentParser(description="Generate a LinkedIn post dataset using Gemini.")
+    parser.add_argument("--num-samples", type=int, default=200)
+    parser.add_argument("--output-dir", type=str, default=str(_ROOT / "data"))
     args = parser.parse_args()
 
-    print(
-        f"Generating {args.num_samples} samples with {len(PERSONAS)} personas x {len(INPUTS)} topics..."
-    )
-    print("Make sure ANTHROPIC_API_KEY is set in your environment.\n")
+    print(f"Generating {args.num_samples} samples...")
+    print("Make sure GOOGLE_API_KEY is set in your environment.\n")
 
     output_path = generate_and_save(num_samples=args.num_samples, output_dir=args.output_dir)
     print(f"\nDone. {args.num_samples} samples saved to {output_path}")

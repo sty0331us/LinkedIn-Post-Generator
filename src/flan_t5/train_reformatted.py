@@ -1,12 +1,13 @@
 import os
 import json
 import torch
+from pathlib import Path
 from transformers import T5ForConditionalGeneration, T5Tokenizer, Seq2SeqTrainer, Seq2SeqTrainingArguments
 from datasets import Dataset
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-data_path = os.path.abspath(os.path.join(script_dir, "..", "data", "linkedin_posts_reformatted.json"))
-output_dir = os.path.abspath(os.path.join(script_dir, "..", "models", "fine_tuned_flan_t5_new"))
+_ROOT = Path(__file__).resolve().parents[2]
+data_path = str(_ROOT / "data" / "linkedin_posts_reformatted.json")
+output_dir = str(_ROOT / "models" / "fine_tuned_flan_t5_new")
 
 device = "mps" if torch.backends.mps.is_available() else "cpu"
 print(f"[1/6] Using device: {device}")
@@ -22,6 +23,7 @@ print(f"[3/6] Loading data from {data_path}...")
 with open(data_path, "r", encoding="utf-8") as f:
     data = json.load(f)
 
+
 def preprocess(examples):
     inputs = [f"Write a LinkedIn post about: {inp}" for inp in examples["input"]]
     targets = examples["output"]
@@ -32,6 +34,7 @@ def preprocess(examples):
         for label in labels["input_ids"]
     ]
     return model_inputs
+
 
 print("[4/6] Preprocessing dataset...")
 dataset = Dataset.from_list(data)
@@ -49,14 +52,10 @@ training_args = Seq2SeqTrainingArguments(
     report_to="none",
     logging_steps=10,
     fp16=False,
-    dataloader_num_workers=0
+    dataloader_num_workers=0,
 )
 
-trainer = Seq2SeqTrainer(
-    model=model,
-    args=training_args,
-    train_dataset=tokenized,
-)
+trainer = Seq2SeqTrainer(model=model, args=training_args, train_dataset=tokenized)
 
 print("[6/6] Starting training...")
 trainer.train()
