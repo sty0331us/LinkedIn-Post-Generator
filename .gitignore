@@ -20,6 +20,6 @@ Thumbs.db
 .env
 
 # 6. 모델 및 데이터 (크기가 큼)
-models/fine_tuned_gpt2/
+models/
 *.bin
 *.model

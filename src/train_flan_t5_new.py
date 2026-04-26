@@ -49,8 +49,7 @@ training_args = Seq2SeqTrainingArguments(
     report_to="none",
     logging_steps=10,
     fp16=False,
-    dataloader_num_workers=0,
-    no_cuda=True,
+    dataloader_num_workers=0
 )
 
 trainer = Seq2SeqTrainer(
